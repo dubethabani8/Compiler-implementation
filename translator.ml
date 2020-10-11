@@ -425,7 +425,8 @@
      | _ -> raise (Failure "expected nonterminal at top of astack") in
     helper astack rhs_len [];;
  
- let sum_ave_prog = "read a read b sum := a + b write sum write sum / 2";;
+ (* let sum_ave_prog = "read a read b sum := a + b write sum write sum / 2";; *)
+ let sum_ave_prog = "b := 1";;
  let primes_prog = "
       read n
       cp := 2
@@ -583,18 +584,19 @@
    | PT_nt ("F", [PT_id id]) -> AST_id id
    | PT_nt ("F", [PT_num num]) -> AST_num num
    | PT_nt ("F", [PT_term "("; expr; PT_term ")"]) -> ast_ize_expr expr
-   | PT_nt ("T", [f; ft]) -> ast_ize_expr_tail (ast_ize_expr f) ft
+   | PT_nt ("T", [f; ft]) -> ast_ize_expr_tail (ast_ize_expr f) (ft)
    | PT_nt ("E", [t; tt]) -> ast_ize_expr_tail (ast_ize_expr t) tt
    | _ -> raise (Failure "malformed parse tree in ast_ize_expr")
  
  and ast_ize_expr_tail (lhs:ast_e) (tail:parse_tree) :ast_e =    (* TT or FT *)
    (* lhs in an inherited attribute.
       tail is a TT or FT parse tree node *)
+   (* print_endline ("here\n"); *)
    match tail with
-   | PT_nt ("TT", []) -> lhs
-   | PT_nt ("FT", []) -> lhs
-   | PT_nt ("FT", [PT_term moo; f; ft]) ->  ast_ize_expr_tail (AST_binop (moo, lhs, ast_ize_expr f)) ft
-   | PT_nt ("TT", [PT_term aoo; t; tt]) -> ast_ize_expr_tail (AST_binop (aoo, lhs, ast_ize_expr t)) tt
+   (* | PT_nt ("TT", []) -> lhs *)
+   | PT_nt ("FT", []) ->print_endline ("here\n"); lhs
+   (* | PT_nt ("FT", [PT_term moo; f; ft]) -> ast_ize_expr_tail (AST_binop (moo, lhs, ast_ize_expr f)) ft
+   | PT_nt ("TT", [PT_term aoo; t; tt]) -> ast_ize_expr_tail (AST_binop (aoo, lhs, ast_ize_expr t)) tt *)
    | _ -> raise (Failure "malformed parse tree in ast_ize_expr_tail")
  
  and ast_ize_C (c:parse_tree) : ast_c =
@@ -665,9 +667,9 @@ and print_PT_list (treeL:parse_tree list): string =
  let sum_ave_parse_tree = parse ecg_parse_table sum_ave_prog;;
  let sum_ave_syntax_tree = ast_ize_P sum_ave_parse_tree;;
  
- let primes_parse_tree = parse ecg_parse_table primes_prog;;
+ (* let primes_parse_tree = parse ecg_parse_table primes_prog;;
  (* print_PT primes_parse_tree;; *)
- let primes_syntax_tree = ast_ize_P primes_parse_tree;;
+ let primes_syntax_tree = ast_ize_P primes_parse_tree;; *)
  
  let compile (code:string) (program_name:string) =
    try
@@ -684,9 +686,10 @@ and print_PT_list (treeL:parse_tree list): string =
      fold_left (^) ""
        (map (fun (code, program_name) -> compile code program_name)
            [(sum_ave_prog, "sum_ave");
-            (primes_prog, "primes");
-            ("write foo", "undef");
-            ("write 3/0", "zero_div")]) in
+            (* (primes_prog, "primes"); *)
+            (* ("write foo", "undef"); *)
+            (* ("write 3/0", "zero_div") *)
+            ]) in
    print_string msgs;;
  
  (* Execute function "main" iff run as a stand-alone program. *)
