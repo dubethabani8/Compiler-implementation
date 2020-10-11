@@ -560,9 +560,8 @@
    
  let rec ast_ize_P (p:parse_tree) : ast_sl =
   match p with
-   | PT_nt ("P", [sl]) -> ast_ize_SL sl
+   | PT_nt ("P", [sl; PT_term e]) -> ast_ize_SL sl
    | _ -> raise (Failure "malformed parse tree in ast_ize_P")
-
 
  and ast_ize_SL (sl:parse_tree) : ast_sl =
    match sl with
@@ -572,22 +571,17 @@
  
  and ast_ize_S (s:parse_tree) : ast_s =
    match s with
-   | PT_nt ("S", [PT_id lhs; PT_term ":="; expr]) (*A := (1 + 2) ||  A := 1 + 2 || A := B + 2*)
-         -> AST_assign (lhs, (ast_ize_expr expr))
-   | PT_nt ("S", [PT_term "read"; PT_id id])
-         -> AST_read id
-   | PT_nt ("S", [PT_term "write"; expr])
-         -> AST_write (ast_ize_expr expr)
-   | PT_nt ("S", [PT_term "if"; c; sl; PT_term "end"])
-         -> AST_if (ast_ize_C c, ast_ize_SL sl)
-   | PT_nt ("S", [PT_term "while"; c; sl; PT_term "end"])
-         -> AST_while (ast_ize_C c, ast_ize_SL sl)
+   | PT_nt ("S", [PT_id lhs; PT_term ":="; expr]) -> AST_assign (lhs, (ast_ize_expr expr))
+   | PT_nt ("S", [PT_term "read"; PT_id id]) -> AST_read id
+   | PT_nt ("S", [PT_term "write"; expr]) -> AST_write (ast_ize_expr expr)
+   | PT_nt ("S", [PT_term "if"; c; sl; PT_term "end"]) -> AST_if (ast_ize_C c, ast_ize_SL sl)
+   | PT_nt ("S", [PT_term "while"; c; sl; PT_term "end"]) -> AST_while (ast_ize_C c, ast_ize_SL sl)
    | _ -> raise (Failure "malformed parse tree in ast_ize_S")
  
  and ast_ize_expr (e:parse_tree) : ast_e =   (* E, T, or F *)
    match e with
    | PT_nt ("F", [PT_id id]) -> AST_id id
-   | PT_nt ("F", [PT_id num]) -> AST_num num
+   | PT_nt ("F", [PT_num num]) -> AST_num num
    | PT_nt ("F", [PT_term "("; expr; PT_term ")"]) -> ast_ize_expr expr
    | PT_nt ("T", [f; ft]) -> ast_ize_expr_tail (ast_ize_expr f) ft
    | PT_nt ("E", [t; tt]) -> ast_ize_expr_tail (ast_ize_expr t) tt
@@ -599,16 +593,13 @@
    match tail with
    | PT_nt ("TT", []) -> lhs
    | PT_nt ("FT", []) -> lhs
-   | PT_nt ("FT", [PT_term mo; f; ft]) 
-          -> AST_binop (mo, ast_ize_expr f, ast_ize_expr_tail (ast_ize_expr f) ft)
-   | PT_nt ("TT", [PT_term ao; t; tt]) -> ast_ize_expr_tail AST_binop (ao, lhs, ast_ize_expr t) tt
+   | PT_nt ("FT", [PT_term moo; f; ft]) ->  ast_ize_expr_tail (AST_binop (moo, lhs, ast_ize_expr f)) ft
+   | PT_nt ("TT", [PT_term aoo; t; tt]) -> ast_ize_expr_tail (AST_binop (aoo, lhs, ast_ize_expr t)) tt
    | _ -> raise (Failure "malformed parse tree in ast_ize_expr_tail")
  
  and ast_ize_C (c:parse_tree) : ast_c =
    match c with
-   (*
-      your code here ...
-   *)
+   | PT_nt ("C", [expr1; PT_term rn; expr2]) -> (rn, ast_ize_expr expr1, ast_ize_expr expr2)
    | _ -> raise (Failure "malformed parse tree in ast_ize_C")
  ;;
  
