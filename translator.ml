@@ -559,40 +559,50 @@
  and ast_c = (string * ast_e * ast_e);;
    
  let rec ast_ize_P (p:parse_tree) : ast_sl =
-   (* your code should replace the following line *)
-   []
- 
+  match p with
+   | PT_nt ("P", [sl]) -> ast_ize_SL sl
+   | _ -> raise (Failure "malformed parse tree in ast_ize_P")
+
+
  and ast_ize_SL (sl:parse_tree) : ast_sl =
    match sl with
    | PT_nt ("SL", []) -> []
-   (*
-      your code here ...
-   *)
+   | PT_nt ("SL", [s; sl]) -> ast_ize_S s::ast_ize_SL sl
    | _ -> raise (Failure "malformed parse tree in ast_ize_SL")
  
  and ast_ize_S (s:parse_tree) : ast_s =
    match s with
-   | PT_nt ("S", [PT_id lhs; PT_term ":="; expr])
+   | PT_nt ("S", [PT_id lhs; PT_term ":="; expr]) (*A := (1 + 2) ||  A := 1 + 2 || A := B + 2*)
          -> AST_assign (lhs, (ast_ize_expr expr))
-   (*
-      your code here ...
-   *)
+   | PT_nt ("S", [PT_term "read"; PT_id id])
+         -> AST_read id
+   | PT_nt ("S", [PT_term "write"; expr])
+         -> AST_write (ast_ize_expr expr)
+  (*
+   | PT_nt ("S", [PT_term "if"; c; sl; PT_term "end"])
+         -> AST_if (ast_ize_C c, ast_ize_SL sl)
+   | PT_nt ("S", [PT_term "while"; c; sl; PT_term "end"])
+         -> AST_while (ast_ize_C c, ast_ize_SL sl)
+  *)
    | _ -> raise (Failure "malformed parse tree in ast_ize_S")
  
  and ast_ize_expr (e:parse_tree) : ast_e =   (* E, T, or F *)
    match e with
-   (*
-      your code here ...
-   *)
+   | PT_nt ("F", [PT_id id]) -> AST_id id
+   | PT_nt ("F", [PT_id num]) -> AST_num num
+   | PT_nt ("F", [PT_term "("; expr; PT_term ")"]) -> ast_ize_expr expr
+   | PT_nt ("T", [f; ft]) -> ast_ize_expr_tail (ast_ize_expr f) ft
+   | PT_nt ("E", [t; tt]) -> ast_ize_expr_tail (ast_ize_expr t) tt
    | _ -> raise (Failure "malformed parse tree in ast_ize_expr")
  
  and ast_ize_expr_tail (lhs:ast_e) (tail:parse_tree) :ast_e =    (* TT or FT *)
    (* lhs in an inherited attribute.
       tail is a TT or FT parse tree node *)
    match tail with
-   (*
-      your code here ...
-   *)
+   PT_nt ("TT", []) -> lhs
+
+   PT_nt ("FT", [PT_term mo; f; ft]) -> AST_binop (mo, ast_ize_expr f, ast_ize_expr_tail (ast_ize_expr f) ft)
+   PT_nt ("TT", [PT_term ao; t; tt]) -> AST_binop (ao, ast_ize_expr t, ast_ize_expr_tail (ast_ize_expr t) tt)
    | _ -> raise (Failure "malformed parse tree in ast_ize_expr_tail")
  
  and ast_ize_C (c:parse_tree) : ast_c =
@@ -649,11 +659,24 @@
  (*******************************************************************
      Testing
   *******************************************************************)
- 
+(*  
+let rec print_PT (tree:parse_tree) : string =
+  match tree with
+  | PT_id id ->  print_string id
+  | PT_error -> "error"
+  | PT_num num -> num
+  | PT_term term -> term
+  | PT_nt (s, t) -> print_string "("; print_string s; print_string ", "; print_PT_list t; 
+and print_PT_list (treeL:parse_tree list): string =
+  match treeL with
+  | [] -> ""
+  | e2::l2 -> print_PT e2; print_string ", "; print_PT_list l2;; *)
+
  let sum_ave_parse_tree = parse ecg_parse_table sum_ave_prog;;
  let sum_ave_syntax_tree = ast_ize_P sum_ave_parse_tree;;
  
  let primes_parse_tree = parse ecg_parse_table primes_prog;;
+ (* print_PT primes_parse_tree;; *)
  let primes_syntax_tree = ast_ize_P primes_parse_tree;;
  
  let compile (code:string) (program_name:string) =
