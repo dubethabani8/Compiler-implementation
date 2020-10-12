@@ -425,8 +425,8 @@
      | _ -> raise (Failure "expected nonterminal at top of astack") in
     helper astack rhs_len [];;
  
- (* let sum_ave_prog = "read a read b sum := a + b write sum write sum / 2";; *)
- let sum_ave_prog = "b := 1";;
+ let sum_ave_prog = "read a read b sum := a + b write sum write sum / 2";;
+ (* let sum_ave_prog = "b := 1+1";; *)
  let primes_prog = "
       read n
       cp := 2
@@ -561,7 +561,7 @@
    
  let rec ast_ize_P (p:parse_tree) : ast_sl =
   match p with
-   | PT_nt ("P", [sl; PT_term e]) -> ast_ize_SL sl
+   | PT_nt ("P", [sl; PT_term "$$"]) -> ast_ize_SL sl
    | _ -> raise (Failure "malformed parse tree in ast_ize_P")
 
  and ast_ize_SL (sl:parse_tree) : ast_sl =
@@ -584,24 +584,30 @@
    | PT_nt ("F", [PT_id id]) -> AST_id id
    | PT_nt ("F", [PT_num num]) -> AST_num num
    | PT_nt ("F", [PT_term "("; expr; PT_term ")"]) -> ast_ize_expr expr
-   | PT_nt ("T", [f; ft]) -> ast_ize_expr_tail (ast_ize_expr f) (ft)
+   | PT_nt ("T", [f; ft]) -> ast_ize_expr_tail (ast_ize_expr f) ft
    | PT_nt ("E", [t; tt]) -> ast_ize_expr_tail (ast_ize_expr t) tt
    | _ -> raise (Failure "malformed parse tree in ast_ize_expr")
  
  and ast_ize_expr_tail (lhs:ast_e) (tail:parse_tree) :ast_e =    (* TT or FT *)
    (* lhs in an inherited attribute.
       tail is a TT or FT parse tree node *)
-   (* print_endline ("here\n"); *)
+   
    match tail with
-   (* | PT_nt ("TT", []) -> lhs *)
-   | PT_nt ("FT", []) ->print_endline ("here\n"); lhs
-   (* | PT_nt ("FT", [PT_term moo; f; ft]) -> ast_ize_expr_tail (AST_binop (moo, lhs, ast_ize_expr f)) ft
-   | PT_nt ("TT", [PT_term aoo; t; tt]) -> ast_ize_expr_tail (AST_binop (aoo, lhs, ast_ize_expr t)) tt *)
+   | PT_nt ("TT", []) -> lhs
+   | PT_nt ("FT", []) -> lhs
+   | PT_nt ("FT", [mo; f; ft]) -> AST_binop ("mo", lhs, (ast_ize_expr_tail (ast_ize_expr f) ft))
+   | PT_nt ("TT", [ao; t; tt]) -> AST_binop ("ao", lhs, (ast_ize_expr_tail (ast_ize_expr t) tt))
+   (* | PT_nt ("FT", [mo; f; ft]) -> ast_ize_expr_tail (AST_binop ("mo", lhs, ast_ize_expr f)) ft
+   | PT_nt ("TT", [ao; t; tt]) -> ast_ize_expr_tail (AST_binop ("ao", lhs, ast_ize_expr t)) tt *)
    | _ -> raise (Failure "malformed parse tree in ast_ize_expr_tail")
- 
+(*  
+ and ast_ize_mo (mo:parse_tree) : ast =
+ match mo with
+ PT_nt ("mo", ) 
+*)
  and ast_ize_C (c:parse_tree) : ast_c =
    match c with
-   | PT_nt ("C", [expr1; PT_term rn; expr2]) -> (rn, ast_ize_expr expr1, ast_ize_expr expr2)
+   | PT_nt ("C", [expr1; rn; expr2]) -> ("rn", ast_ize_expr expr1, ast_ize_expr expr2)
    | _ -> raise (Failure "malformed parse tree in ast_ize_C")
  ;;
  
@@ -621,32 +627,59 @@
         in any translated program. *)
    
  let rec translate (ast:ast_sl)
-   :  string   * string
-   (* warnings   output_program *)  = "", "// translated program here"
+   :  string * string = get_errors ast, translate_sl ast
+   (* warnings   output_program  = "", "// translated program here" *)
  
- (*  commented out so this code will compile
+ (*  commented out so this code will compile *)
  
- and translate_sl (...
+ and get_errors (ast:ast_sl) : string =
+ "errors"
+
+ and translate_sl (sl:ast_sl) : string =
+ match sl with
+ | [] -> ""
+ | h::t -> (translate_s h ^ "\n" ^ translate_sl t)
+
+ and translate_s (s:ast_s) : string =
+ match s with
+ | AST_error -> "errors"
+ | AST_assign (lhs, expr) -> translate_assign lhs expr
+ | AST_read var -> translate_read var 
+ | AST_write var -> translate_write var
+ | AST_if (c, sl) -> translate_if c sl
+ | AST_while (c, sl) -> translate_while c sl
  
- and translate_s (...
+ and translate_assign (lhs:string) (expr:ast_e) : string =
+ (lhs ^ " = " ^ translate_expr expr) ^ ";" (*add initialization if neccesary*)
  
- and translate_assign (...
+ and translate_read (var:string): string =
+ (*add initialization if neccesary*)
+ "scanf(\"%d\", &" ^ var ^ ");"
  
- and translate_read (...
+ and translate_write (expr:ast_e): string =
+ (*maybe add check for if already initialized?*)
+ "printf(\"%d\", " ^ translate_expr expr ^ ");"
  
- and translate_write (...
+ and translate_if (c:ast_c) (sl:ast_sl) : string =
+ "if (" ^ translate_cond c ^ ") {\n" ^ translate_sl sl ^ "}"
  
- and translate_if (...
+ and translate_while (c:ast_c) (sl:ast_sl) : string =
+ "while (" ^ translate_cond c ^ ") {\n" ^ translate_sl sl ^ "}"
  
- and translate_while (...
- 
- and translate_expr (...
- 
- and translate_cond (...
- 
- *)
- 
+ and translate_expr (expr: ast_e) : string =
+ match expr with
+ | AST_binop (op, expr1, expr2) -> (translate_expr expr1) ^ " " ^ op ^ " " ^ (translate_expr expr2)
+ | AST_id id -> id
+ | AST_num var -> var
+
+ and translate_cond ((op, expr1, expr2):ast_c) : string =
+ (translate_expr expr1) ^ " " ^ op ^ " " ^ (translate_expr expr2)
  ;;
+
+ (* let rec print_AST_s (s:ast_s) =
+  match s with
+  | AST_error -> "ERROR"
+  | AST_assign (":=", e) ->  *)
  
  (*******************************************************************
      Testing
@@ -667,9 +700,9 @@ and print_PT_list (treeL:parse_tree list): string =
  let sum_ave_parse_tree = parse ecg_parse_table sum_ave_prog;;
  let sum_ave_syntax_tree = ast_ize_P sum_ave_parse_tree;;
  
- (* let primes_parse_tree = parse ecg_parse_table primes_prog;;
+ let primes_parse_tree = parse ecg_parse_table primes_prog;;
  (* print_PT primes_parse_tree;; *)
- let primes_syntax_tree = ast_ize_P primes_parse_tree;; *)
+ let primes_syntax_tree = ast_ize_P primes_parse_tree;;
  
  let compile (code:string) (program_name:string) =
    try
@@ -686,9 +719,9 @@ and print_PT_list (treeL:parse_tree list): string =
      fold_left (^) ""
        (map (fun (code, program_name) -> compile code program_name)
            [(sum_ave_prog, "sum_ave");
-            (* (primes_prog, "primes"); *)
-            (* ("write foo", "undef"); *)
-            (* ("write 3/0", "zero_div") *)
+            (primes_prog, "primes");
+            ("write foo", "undef");
+            ("write 3/0", "zero_div")
             ]) in
    print_string msgs;;
  

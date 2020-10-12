@@ -1,1 +1,1 @@
-// translated program here
+printf("%d", 3 mo 0);

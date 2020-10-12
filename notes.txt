@@ -1,0 +1,3 @@
+-errors in syntax tree buildings
+-add mo and ao functions
+-in translate_sl, pass list of initialized/seen vars to translate_s with h conctatebated

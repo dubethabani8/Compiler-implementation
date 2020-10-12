@@ -1,1 +1,1 @@
-// translated program here
+printf("%d", foo);
