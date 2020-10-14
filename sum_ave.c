@@ -1,5 +1,7 @@
-scanf("%d", &a);
-scanf("%d", &b);
-sum = a ao b;
-printf("%d", sum);
-printf("%d", sum mo 2);
+#include <stdio.h>
+#include <stdlib.h>
+
+int main()
+{
+    b = 1 + 1;
+}

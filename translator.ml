@@ -425,8 +425,8 @@
      | _ -> raise (Failure "expected nonterminal at top of astack") in
     helper astack rhs_len [];;
  
- let sum_ave_prog = "read a read b sum := a + b write sum write sum / 2";;
- (* let sum_ave_prog = "b := 1+1";; *)
+ (* let sum_ave_prog = "read a read b sum := a + b write sum write sum / 2";; *)
+ let sum_ave_prog = "b := 1 + 1";;
  let primes_prog = "
       read n
       cp := 2
@@ -595,19 +595,28 @@
    match tail with
    | PT_nt ("TT", []) -> lhs
    | PT_nt ("FT", []) -> lhs
-   | PT_nt ("FT", [mo; f; ft]) -> AST_binop ("mo", lhs, (ast_ize_expr_tail (ast_ize_expr f) ft))
-   | PT_nt ("TT", [ao; t; tt]) -> AST_binop ("ao", lhs, (ast_ize_expr_tail (ast_ize_expr t) tt))
+   | PT_nt ("FT", [mo; f; ft]) -> 
+    (match mo with
+      | PT_nt ("mo", [PT_term mo]) -> AST_binop (mo, lhs, (ast_ize_expr_tail (ast_ize_expr f) ft))
+      | _ -> raise (Failure "malformed parse tree in mo"))
+   | PT_nt ("TT", [ao; t; tt]) -> 
+    (match ao with
+      | PT_nt ("ao", [PT_term ao]) -> AST_binop (ao, lhs, (ast_ize_expr_tail (ast_ize_expr t) tt))
+      | _ -> raise (Failure "malformed parse tree in ao"))
    (* | PT_nt ("FT", [mo; f; ft]) -> ast_ize_expr_tail (AST_binop ("mo", lhs, ast_ize_expr f)) ft
    | PT_nt ("TT", [ao; t; tt]) -> ast_ize_expr_tail (AST_binop ("ao", lhs, ast_ize_expr t)) tt *)
    | _ -> raise (Failure "malformed parse tree in ast_ize_expr_tail")
 (*  
  and ast_ize_mo (mo:parse_tree) : ast =
- match mo with
+ match mo with  
  PT_nt ("mo", ) 
 *)
  and ast_ize_C (c:parse_tree) : ast_c =
    match c with
-   | PT_nt ("C", [expr1; rn; expr2]) -> ("rn", ast_ize_expr expr1, ast_ize_expr expr2)
+   | PT_nt ("C", [expr1; rn; expr2]) -> 
+    (match rn with
+    | PT_nt ("rn", [PT_term rn]) -> (rn, ast_ize_expr expr1, ast_ize_expr expr2)
+    | _ -> raise (Failure "malformed parse tree in ao"))
    | _ -> raise (Failure "malformed parse tree in ast_ize_C")
  ;;
  
@@ -627,7 +636,8 @@
         in any translated program. *)
    
  let rec translate (ast:ast_sl)
-   :  string * string = get_errors ast, translate_sl ast
+   :  string * string = get_errors ast, "#include <stdio.h>" ^ "\n" ^ "#include <stdlib.h>" 
+   ^ "\n\n" ^ "int main() { \n"^ translate_sl ast ^ "}"
    (* warnings   output_program  = "", "// translated program here" *)
  
  (*  commented out so this code will compile *)
@@ -722,8 +732,7 @@ and print_PT_list (treeL:parse_tree list): string =
             (primes_prog, "primes");
             ("write foo", "undef");
             ("write 3/0", "zero_div")
-            ]) in
-   print_string msgs;;
+            ]) in print_string msgs;;
  
  (* Execute function "main" iff run as a stand-alone program. *)
  if !Sys.interactive then () else main ();;

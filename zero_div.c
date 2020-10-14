@@ -1,1 +1,7 @@
-printf("%d", 3 mo 0);
+#include <stdio.h>
+#include <stdlib.h>
+
+int main()
+{
+    printf("%d", 3 / 0);
+}
