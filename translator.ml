@@ -636,14 +636,11 @@
         in any translated program. *)
    
  let rec translate (ast:ast_sl)
-   :  string * string = get_errors ast, "#include <stdio.h>" ^ "\n" ^ "#include <stdlib.h>" 
+   :  string * string = "", "#include <stdio.h>" ^ "\n" ^ "#include <stdlib.h>" 
    ^ "\n\n" ^ "int main() { \n"^ translate_sl ast ^ "}"
    (* warnings   output_program  = "", "// translated program here" *)
  
  (*  commented out so this code will compile *)
- 
- and get_errors (ast:ast_sl) : string =
- "errors"
 
  and translate_sl (sl:ast_sl) : string =
  match sl with
